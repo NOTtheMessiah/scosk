@@ -17,11 +17,10 @@ Creates a pygame window with a virtual keyboard. To initialize, ensure the steam
 ## TODO
 
 * Refactor with event controller
-* Add additional controller button bindings
 * mimic official Steam design
 * pop up on screen away from mouse, on-top and unfocused (may require talking to X or the window manager)
 * integrate with [sc-desktop](https://github.com/ynsta/steamcontroller/blob/master/scripts/sc-desktop.py)
 
-* Notes
+## Notes
 
 I've only tested from within a tiling window manager. I as the author, assume no liability for what you do with this program.

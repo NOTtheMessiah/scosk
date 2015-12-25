@@ -10,10 +10,19 @@ import time
 import os
 import sys
 import pygame
+from pygame.locals import QUIT
+from Xlib import display
 
+wsx, wsy = 640, 320 # Window Size <dim>
 pygame.init()
-ssx, ssy = 640, 320 # Screen Size <dim>
-screen = pygame.display.set_mode((ssx, ssy))
+
+dispInfo = pygame.display.Info()
+ssx, ssy = dispInfo.current_w, dispInfo.current_h
+mousePos = display.Display().screen().root.query_pointer()._data
+os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (mousePos["root_x"]-wsx//2, mousePos["root_y"]+64)
+
+pygame.display.set_caption("scosk")
+screen = pygame.display.set_mode((wsx, wsy))
 screen.fill((0x0f, 0x28, 0x3c))
 sci_p = SCI_NULL
 
@@ -97,21 +106,21 @@ whatKey = {
 def rkeypad(px, py, press):
     n = 5
     tr = ""
-    tr += rowOfKeys(['7', '8', '9', '0', '-', '←'], ssx//2, 0, ssx//2, ssy//n, px, py, press)
-    tr += rowOfKeys(['y', 'u', 'i', 'o', 'p'], ssx//2, 1*ssy//n, ssx//2, ssy//n, px, py, press)
-    tr += rowOfKeys(['h', 'j', 'k', 'l', ';', '\''], ssx//2, 2*ssy//n, ssx//2, ssy//n, px, py, press)
-    tr += rowOfKeys(['n', 'm', ',', '.', '/'], ssx//2, 3*ssy//n, ssx//2, ssy//n, px, py, press)
-    tr += rowOfKeys([' '], ssx//2, 4*ssy//n, ssx//2, ssy//n, px, py, press)
+    tr += rowOfKeys(['7', '8', '9', '0', '-', '←'], wsx//2, 0, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['y', 'u', 'i', 'o', 'p'], wsx//2, 1*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['h', 'j', 'k', 'l', ';', '\''], wsx//2, 2*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['n', 'm', ',', '.', '/'], wsx//2, 3*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys([' '], wsx//2, 4*wsy//n, wsx//2, wsy//n, px, py, press)
     return tr
 
 def lkeypad(px,py,press):
     n = 5
     tr = ""
-    tr += rowOfKeys(['1', '2', '3', '4', '5', '6'], 0, 0, ssx//2, ssy//n, px, py, press)
-    tr += rowOfKeys(['q', 'w', 'e', 'r', 't'], 0, 1*ssy//n, ssx//2, ssy//n, px, py, press)
-    tr += rowOfKeys(['a', 's', 'd', 'f', 'g'], 0, 2*ssy//n, ssx//2, ssy//n, px, py, press)
-    tr += rowOfKeys(['z', 'x', 'c', 'v', 'b'], 0, 3*ssy//n, ssx//2, ssy//n, px, py, press)
-    tr += rowOfKeys([' '], 0, 4*ssy//n, ssx//2, ssy//n, px, py, press)
+    tr += rowOfKeys(['1', '2', '3', '4', '5', '6'], 0, 0, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['q', 'w', 'e', 'r', 't'], 0, 1*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['a', 's', 'd', 'f', 'g'], 0, 2*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['z', 'x', 'c', 'v', 'b'], 0, 3*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys([' '], 0, 4*wsy//n, wsx//2, wsy//n, px, py, press)
     return tr
 
 def exitCallback(evm, btn, pressed):
@@ -132,25 +141,27 @@ def evminit():
     return evm
 
 def update(sc, sci):
+    if QUIT in [p.type for p in pygame.event.get()]:
+        sys.exit()
     if sci.status != 15361:
         return
     evm.process(sc, sci)
     global sci_p
-    lpx, lpy = (0x8000+sci.lpad_x*12//10)*ssx//(0x1fffe), (0x8000-sci.lpad_y*12//10)*ssy//(0xffff)
-    rpx, rpy = (0x18000+sci.rpad_x*12//10)*ssx//(0x1fffe), (0x8000-sci.rpad_y*12//10)*ssy//(0xffff)
+    lpx, lpy = (0x8000+sci.lpad_x*12//10)*wsx//(0x1fffe), (0x8000-sci.lpad_y*12//10)*wsy//(0xffff)
+    rpx, rpy = (0x18000+sci.rpad_x*12//10)*wsx//(0x1fffe), (0x8000-sci.rpad_y*12//10)*wsy//(0xffff)
     lpadbuttons = sci.buttons & 0x0a000000
     rpadbuttons = sci.buttons & 0x14000000
     rr, rpress, lr, lpress = 10, False, 10, False
     if rpadbuttons == 0x10000000:
-        rr = 10
+        rr, rpress = 10, (sci_p.buttons & 0x14000000 == 0x14000000)
     elif rpadbuttons == 0x14000000:
-        rr, rpress = 7, (sci_p.buttons & 0x14000000 != 0x14000000)
+        rr = 7
     else:
         rr = 100
     if lpadbuttons == 0x08000000:
-        lr = 10
+        lr, lpress = 10, (sci_p.buttons & 0x0a000000 == 0x0a000000)
     elif lpadbuttons == 0x0a000000:
-        lr, lpress = 7, (sci_p.buttons & 0x0a000000 != 0x0a000000)
+        lr = 7
     else:
         lr = 100
     screen.fill((0x0f, 0x28, 0x3c))
@@ -164,6 +175,9 @@ def update(sc, sci):
     sci_p = sci
 
 if __name__ == '__main__':
+
+    virtualKeycap("PLEASE INSERT CONTROLLER",wsx//4,wsy//4,wsx//2,wsy//2,0,0)
+    pygame.display.update()
     evm = evminit()
     sc = SteamController(callback=update)
     sc.run()

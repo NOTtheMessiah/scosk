@@ -4,7 +4,7 @@
 """Steam Controller On-Screen Keyboard - Proof of Concept"""
 
 from steamcontroller import *
-import steamcontroller.uinput as sui 
+import steamcontroller.uinput as sui
 from steamcontroller.events import EventMapper, Pos
 import time
 import os
@@ -13,7 +13,7 @@ import pygame
 from pygame.locals import QUIT
 from Xlib import display
 
-wsx, wsy = 640, 320 # Window Size <dim>
+wsx, wsy = 640, 320  # Window Size <dim>
 pygame.init()
 
 dispInfo = pygame.display.Info()
@@ -28,9 +28,11 @@ sci_p = SCI_NULL
 
 kb = sui.Keyboard()
 
-def tap_key(k):
+
+def tapKey(k):
     kb.pressEvent([k])
     kb.releaseEvent([k])
+
 
 def virtualKeycap(txt, x, y, w, h, px, py):
     if px > x and px < x + w and py > y and py < y+h:
@@ -39,15 +41,14 @@ def virtualKeycap(txt, x, y, w, h, px, py):
     else:
         pygame.draw.rect(screen, (0x19, 0x3d, 0x55), (x+5, y+5, w-10, h-10))
         b = False
-        
     textSurf = pygame.font.SysFont("Sans", 20).render(txt, True, (255, 255, 255))
     textRect = textSurf.get_rect(center=(x+(w//2), y+(h//2)))
     screen.blit(textSurf, textRect)
     return b
 
+
 def rowOfKeys(ls, x, y, w, h, px, py, press):
     n = len(ls)
-    a = []
     k = ""
     for i, l in enumerate(ls):
         if virtualKeycap(l, x+i*w//n, y, w//n, h, px, py) and press:
@@ -55,79 +56,91 @@ def rowOfKeys(ls, x, y, w, h, px, py, press):
     return k
 
 whatKey = {
-    '0' : sui.Keys.KEY_0,
-    '1' : sui.Keys.KEY_1,
-    '2' : sui.Keys.KEY_2,
-    '3' : sui.Keys.KEY_3,
-    '4' : sui.Keys.KEY_4,
-    '5' : sui.Keys.KEY_5,
-    '6' : sui.Keys.KEY_6,
-    '7' : sui.Keys.KEY_7,
-    '8' : sui.Keys.KEY_8,
-    '9' : sui.Keys.KEY_9,
-    'a' : sui.Keys.KEY_A,
-    'b' : sui.Keys.KEY_B,
-    'c' : sui.Keys.KEY_C,
-    'd' : sui.Keys.KEY_D,
-    'e' : sui.Keys.KEY_E,
-    'f' : sui.Keys.KEY_F,
-    'g' : sui.Keys.KEY_G,
-    'h' : sui.Keys.KEY_H,
-    'i' : sui.Keys.KEY_I,
-    'j' : sui.Keys.KEY_J,
-    'k' : sui.Keys.KEY_K,
-    'l' : sui.Keys.KEY_L,
-    'm' : sui.Keys.KEY_M,
-    'n' : sui.Keys.KEY_N,
-    'o' : sui.Keys.KEY_O,
-    'p' : sui.Keys.KEY_P,
-    'q' : sui.Keys.KEY_Q,
-    'r' : sui.Keys.KEY_R,
-    's' : sui.Keys.KEY_S,
-    't' : sui.Keys.KEY_T,
-    'u' : sui.Keys.KEY_U,
-    'v' : sui.Keys.KEY_V,
-    'w' : sui.Keys.KEY_W,
-    'x' : sui.Keys.KEY_X,
-    'y' : sui.Keys.KEY_Y,
-    'z' : sui.Keys.KEY_Z,
-    ';' : sui.Keys.KEY_SEMICOLON,
-    '\\' : sui.Keys.KEY_BACKSLASH,
-    '\'' : sui.Keys.KEY_APOSTROPHE,
-    ',' : sui.Keys.KEY_COMMA,
-    '.' : sui.Keys.KEY_DOT,
-    '/' : sui.Keys.KEY_SLASH,
-    '-' : sui.Keys.KEY_MINUS,
-    '?' : sui.Keys.KEY_QUESTION,
-    ' ' : sui.Keys.KEY_SPACE,
-    '←' : sui.Keys.KEY_BACKSPACE
+    '0': sui.Keys.KEY_0,
+    '1': sui.Keys.KEY_1,
+    '2': sui.Keys.KEY_2,
+    '3': sui.Keys.KEY_3,
+    '4': sui.Keys.KEY_4,
+    '5': sui.Keys.KEY_5,
+    '6': sui.Keys.KEY_6,
+    '7': sui.Keys.KEY_7,
+    '8': sui.Keys.KEY_8,
+    '9': sui.Keys.KEY_9,
+    'a': sui.Keys.KEY_A,
+    'b': sui.Keys.KEY_B,
+    'c': sui.Keys.KEY_C,
+    'd': sui.Keys.KEY_D,
+    'e': sui.Keys.KEY_E,
+    'f': sui.Keys.KEY_F,
+    'g': sui.Keys.KEY_G,
+    'h': sui.Keys.KEY_H,
+    'i': sui.Keys.KEY_I,
+    'j': sui.Keys.KEY_J,
+    'k': sui.Keys.KEY_K,
+    'l': sui.Keys.KEY_L,
+    'm': sui.Keys.KEY_M,
+    'n': sui.Keys.KEY_N,
+    'o': sui.Keys.KEY_O,
+    'p': sui.Keys.KEY_P,
+    'q': sui.Keys.KEY_Q,
+    'r': sui.Keys.KEY_R,
+    's': sui.Keys.KEY_S,
+    't': sui.Keys.KEY_T,
+    'u': sui.Keys.KEY_U,
+    'v': sui.Keys.KEY_V,
+    'w': sui.Keys.KEY_W,
+    'x': sui.Keys.KEY_X,
+    'y': sui.Keys.KEY_Y,
+    'z': sui.Keys.KEY_Z,
+    ';': sui.Keys.KEY_SEMICOLON,
+    '\\': sui.Keys.KEY_BACKSLASH,
+    '\'': sui.Keys.KEY_APOSTROPHE,
+    ',': sui.Keys.KEY_COMMA,
+    '.': sui.Keys.KEY_DOT,
+    '/': sui.Keys.KEY_SLASH,
+    '-': sui.Keys.KEY_MINUS,
+    '?': sui.Keys.KEY_QUESTION,
+    ' ': sui.Keys.KEY_SPACE,
+    '←': sui.Keys.KEY_BACKSPACE
 }
+
 
 def rkeypad(px, py, press):
     n = 5
     tr = ""
-    tr += rowOfKeys(['7', '8', '9', '0', '-', '←'], wsx//2, 0, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['y', 'u', 'i', 'o', 'p'], wsx//2, 1*wsy//n, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['h', 'j', 'k', 'l', ';', '\''], wsx//2, 2*wsy//n, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['n', 'm', ',', '.', '/'], wsx//2, 3*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['7', '8', '9', '0', '-', '←'],
+                    wsx//2, 0, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['y', 'u', 'i', 'o', 'p'],
+                    wsx//2, 1*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['h', 'j', 'k', 'l', ';', '\''],
+                    wsx//2, 2*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['n', 'm', ',', '.', '/'],
+                    wsx//2, 3*wsy//n, wsx//2, wsy//n, px, py, press)
     tr += rowOfKeys([' '], wsx//2, 4*wsy//n, wsx//2, wsy//n, px, py, press)
     return tr
 
-def lkeypad(px,py,press):
+
+def lkeypad(px, py, press):
     n = 5
     tr = ""
-    tr += rowOfKeys(['1', '2', '3', '4', '5', '6'], 0, 0, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['q', 'w', 'e', 'r', 't'], 0, 1*wsy//n, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['a', 's', 'd', 'f', 'g'], 0, 2*wsy//n, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['z', 'x', 'c', 'v', 'b'], 0, 3*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['1', '2', '3', '4', '5', '6'],
+                    0, 0, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['q', 'w', 'e', 'r', 't'],
+                    0, 1*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['a', 's', 'd', 'f', 'g'],
+                    0, 2*wsy//n, wsx//2, wsy//n, px, py, press)
+    tr += rowOfKeys(['z', 'x', 'c', 'v', 'b'],
+                    0, 3*wsy//n, wsx//2, wsy//n, px, py, press)
     tr += rowOfKeys([' '], 0, 4*wsy//n, wsx//2, wsy//n, px, py, press)
     return tr
+
 
 def exitCallback(evm, btn, pressed):
     screen.fill((255, 0, 0))
     print("ABORT")
     if not pressed:
         sys.exit()
+
 
 def evminit():
     evm = EventMapper()
@@ -136,9 +149,10 @@ def evminit():
     evm.setButtonAction(SCButtons.RB, sui.Keys.KEY_SPACE)
     evm.setButtonAction(SCButtons.A, sui.Keys.KEY_ENTER)
     evm.setButtonCallback(SCButtons.B, exitCallback)
-    #evm.setPadButtonCallback(Pos.RIGHT, _)
-    #evm.setPadButtonCallback(Pos.LEFT, _)
+    # evm.setPadButtonCallback(Pos.RIGHT, _)
+    # evm.setPadButtonCallback(Pos.LEFT, _)
     return evm
+
 
 def update(sc, sci):
     if QUIT in [p.type for p in pygame.event.get()]:
@@ -166,9 +180,11 @@ def update(sc, sci):
         lr = 100
     screen.fill((0x0f, 0x28, 0x3c))
     lk = lkeypad(lpx, lpy, lpress)
-    if lpress and lk != '': tap_key(whatKey[lk])
+    if lpress and lk != '':
+        tapKey(whatKey[lk])
     rk = rkeypad(rpx, rpy, rpress)
-    if rpress and rk != '': tap_key(whatKey[rk])
+    if rpress and rk != '':
+        tapKey(whatKey[rk])
     pygame.draw.circle(screen, (255, 128, 128), (lpx, lpy), lr, 2)
     pygame.draw.circle(screen, (128, 255, 128), (rpx, rpy), rr, 2)
     pygame.display.update()
@@ -176,7 +192,7 @@ def update(sc, sci):
 
 if __name__ == '__main__':
 
-    virtualKeycap("PLEASE INSERT CONTROLLER",wsx//4,wsy//4,wsx//2,wsy//2,0,0)
+    virtualKeycap("PLEASE INSERT CONTROLLER", wsx//4, wsy//4, wsx//2, wsy//2, 0, 0)
     pygame.display.update()
     evm = evminit()
     sc = SteamController(callback=update)

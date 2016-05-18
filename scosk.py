@@ -14,46 +14,10 @@ from pygame.locals import QUIT
 from Xlib import display
 
 wsx, wsy = 640, 320  # Window Size <dim>
-pygame.init()
 
-dispInfo = pygame.display.Info()
-ssx, ssy = dispInfo.current_w, dispInfo.current_h
-mousePos = display.Display().screen().root.query_pointer()._data
-os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (mousePos["root_x"]-wsx//2, mousePos["root_y"]+64)
-
-pygame.display.set_caption("scosk")
-screen = pygame.display.set_mode((wsx, wsy))
-screen.fill((0x0f, 0x28, 0x3c))
 sci_p = SCI_NULL
 
 kb = sui.Keyboard()
-
-
-def tapKey(k):
-    kb.pressEvent([k])
-    kb.releaseEvent([k])
-
-
-def virtualKeycap(txt, x, y, w, h, px, py):
-    if px > x and px < x + w and py > y and py < y+h:
-        pygame.draw.rect(screen, (0x25, 0x5f, 0x7e), (x+5, y+5, w-10, h-10))
-        b = True
-    else:
-        pygame.draw.rect(screen, (0x19, 0x3d, 0x55), (x+5, y+5, w-10, h-10))
-        b = False
-    textSurf = pygame.font.SysFont("Sans", 20).render(txt, True, (255, 255, 255))
-    textRect = textSurf.get_rect(center=(x+(w//2), y+(h//2)))
-    screen.blit(textSurf, textRect)
-    return b
-
-
-def rowOfKeys(ls, x, y, w, h, px, py, press):
-    n = len(ls)
-    k = ""
-    for i, l in enumerate(ls):
-        if virtualKeycap(l, x+i*w//n, y, w//n, h, px, py) and press:
-            k = l
-    return k
 
 whatKey = {
     '0': sui.Keys.KEY_0,
@@ -104,55 +68,90 @@ whatKey = {
     '←': sui.Keys.KEY_BACKSPACE
 }
 
+kp_left = [['1', '2', '3', '4', '5', '6'], ['q', 'w', 'e', 'r', 't'], ['a', 's', 'd', 'f', 'g'], ['z', 'x', 'c', 'v', 'b'], [' ']]
+kp_right = [['7', '8', '9', '0', '-', '←'], ['y', 'u', 'i', 'o', 'p'], ['h', 'j', 'k', 'l', ';', '\''], ['n', 'm', ',', '.', '/'], [' ']]
 
-def rkeypad(px, py, press):
+class Overlay:
+    def __init__(self):
+        pygame.init()
+        # dispInfo = pygame.display.Info()
+        # ssx, ssy = dispInfo.current_w, dispInfo.current_h
+        mousePos = display.Display().screen().root.query_pointer()._data
+        os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (mousePos["root_x"]-wsx//2, mousePos["root_y"]+64)
+        pygame.display.set_caption("scosk")
+        self.canvas = pygame.display.set_mode((wsx, wsy))
+        self.canvas.fill((0x0f, 0x28, 0x3c))
+
+    def drawKeycap(self, state, txt, x, y, w, h):
+        if state:
+            pygame.draw.rect(self.canvas, (0x25, 0x5f, 0x7e), (x+5, y+5, w-10, h-10))
+        else:
+            pygame.draw.rect(self.canvas, (0x19, 0x3d, 0x55), (x+5, y+5, w-10, h-10))
+        textSurf = pygame.font.SysFont("Sans", 20).render(txt, True, (255, 255, 255))
+        textRect = textSurf.get_rect(center=(x+(w//2), y+(h//2)))
+        self.canvas.blit(textSurf, textRect)
+
+    def drawPointer(self, c, px, py, r):
+        pygame.draw.circle(self.canvas, c, (px, py), r, 2)
+
+    def update(self):
+        pygame.display.update()
+
+ovr = Overlay()
+
+
+def tapKey(k):
+    kb.pressEvent([k])
+    kb.releaseEvent([k])
+
+
+def virtualKeycap(txt, x, y, w, h, px, py):
+    b = px > x and px < x + w and py > y and py < y+h
+    ovr.drawKeycap(b, txt, x, y, w, h)
+    return b
+
+
+def rowOfKeys(ls, x, y, w, h, px, py, press):
+    n = len(ls)
+    k = ""
+    for i, l in enumerate(ls):
+        if virtualKeycap(l, x+i*w//n, y, w//n, h, px, py) and press:
+            k = l
+    return k
+
+
+def keypad(px, py, press, right):
     n = 5
     tr = ""
-    tr += rowOfKeys(['7', '8', '9', '0', '-', '←'],
-                    wsx//2, 0, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['y', 'u', 'i', 'o', 'p'],
-                    wsx//2, 1*wsy//n, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['h', 'j', 'k', 'l', ';', '\''],
-                    wsx//2, 2*wsy//n, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['n', 'm', ',', '.', '/'],
-                    wsx//2, 3*wsy//n, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys([' '], wsx//2, 4*wsy//n, wsx//2, wsy//n, px, py, press)
+    offset = wsx//2 if right else 0
+    kp = kp_right if right else kp_left
+    for row, krow in enumerate(kp):
+        tr += rowOfKeys(krow, offset, row*wsy//n, wsx//2, wsy//n, px, py, press)
     return tr
 
 
-def lkeypad(px, py, press):
-    n = 5
-    tr = ""
-    tr += rowOfKeys(['1', '2', '3', '4', '5', '6'],
-                    0, 0, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['q', 'w', 'e', 'r', 't'],
-                    0, 1*wsy//n, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['a', 's', 'd', 'f', 'g'],
-                    0, 2*wsy//n, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys(['z', 'x', 'c', 'v', 'b'],
-                    0, 3*wsy//n, wsx//2, wsy//n, px, py, press)
-    tr += rowOfKeys([' '], 0, 4*wsy//n, wsx//2, wsy//n, px, py, press)
-    return tr
+class OSKEventMapper(EventMapper):
+    def __init__(self):
+        super(OSKEventMapper, self).__init__()
+        self.set_overlay_buttons()
 
+    @staticmethod
+    def exitCallback(self, btn, pressed):
+        if not pressed:
+            ovr.canvas.fill((255, 0, 0))
+            ovr.update()
+            sys.exit()
+        else:
+            print("ABORT")
 
-def exitCallback(evm, btn, pressed):
-    screen.fill((255, 0, 0))
-    print("ABORT")
-    if not pressed:
-        sys.exit()
-
-
-def evminit():
-    evm = EventMapper()
-    evm.setButtonAction(SCButtons.LGRIP, sui.Keys.KEY_LEFTSHIFT)
-    evm.setButtonAction(SCButtons.LB, sui.Keys.KEY_BACKSPACE)
-    evm.setButtonAction(SCButtons.RB, sui.Keys.KEY_SPACE)
-    evm.setButtonAction(SCButtons.A, sui.Keys.KEY_ENTER)
-    evm.setButtonCallback(SCButtons.B, exitCallback)
-    # evm.setPadButtonCallback(Pos.RIGHT, _)
-    # evm.setPadButtonCallback(Pos.LEFT, _)
-    return evm
-
+    def set_overlay_buttons(self):
+        self.setButtonAction(SCButtons.LGRIP, sui.Keys.KEY_LEFTSHIFT)
+        self.setButtonAction(SCButtons.LB, sui.Keys.KEY_BACKSPACE)
+        self.setButtonAction(SCButtons.RB, sui.Keys.KEY_SPACE)
+        self.setButtonAction(SCButtons.A, sui.Keys.KEY_ENTER)
+        self.setButtonCallback(SCButtons.B, self.exitCallback)
+        # self.setPadButtonCallback(Pos.RIGHT, _)
+        # self.setPadButtonCallback(Pos.LEFT, _)
 
 def update(sc, sci):
     if QUIT in [p.type for p in pygame.event.get()]:
@@ -178,22 +177,22 @@ def update(sc, sci):
         lr = 7
     else:
         lr = 100
-    screen.fill((0x0f, 0x28, 0x3c))
-    lk = lkeypad(lpx, lpy, lpress)
+    ovr.canvas.fill((0x0f, 0x28, 0x3c))
+    lk = keypad(lpx, lpy, lpress, False)
     if lpress and lk != '':
         tapKey(whatKey[lk])
-    rk = rkeypad(rpx, rpy, rpress)
+    rk = keypad(rpx, rpy, rpress, True)
     if rpress and rk != '':
         tapKey(whatKey[rk])
-    pygame.draw.circle(screen, (255, 128, 128), (lpx, lpy), lr, 2)
-    pygame.draw.circle(screen, (128, 255, 128), (rpx, rpy), rr, 2)
-    pygame.display.update()
+    ovr.drawPointer((255, 128, 128), lpx, lpy, lr)
+    ovr.drawPointer((255, 128, 128), rpx, rpy, rr)
+    ovr.update()
     sci_p = sci
 
 if __name__ == '__main__':
 
     virtualKeycap("PLEASE INSERT CONTROLLER", wsx//4, wsy//4, wsx//2, wsy//2, 0, 0)
-    pygame.display.update()
-    evm = evminit()
+    ovr.update()
+    evm = OSKEventMapper()
     sc = SteamController(callback=update)
     sc.run()

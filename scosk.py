@@ -77,8 +77,6 @@ kp_right = [['7', '8', '9', '0', '-', '←'], ['y', 'u', 'i', 'o', 'p'],
 class Overlay:
     def __init__(self):
         pygame.init()
-        # dispInfo = pygame.display.Info()
-        # ssx, ssy = dispInfo.current_w, dispInfo.current_h
         mousePos = display.Display().screen().root.query_pointer()._data
         os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (mousePos["root_x"]-wsx//2, mousePos["root_y"]+64)
         pygame.display.set_caption("scosk")
@@ -112,47 +110,46 @@ class PointerButton(IntEnum):
     PRESS = 2
 
 
+class Pointer():
+    def __init__(self, right):
+        self.right = right
+        if self.right:
+            self.px, self.py = 0x18000*wsx//0x1fffe, 0x8000*wsy//0xffff
+        else:
+            self.px, self.py = 0x8000*wsx//0x1fffe, 0x8000*wsy//0xffff
+        self.pb = PointerButton.NONE
+        self.k = ''
+
+    def updateState(self, sci, sci_p):
+        pad = SCButtons.RPAD if self.right else SCButtons.LPAD
+        padt = SCButtons.RPADTOUCH if self.right else SCButtons.LPADTOUCH
+        padbuttons = sci.buttons & (pad.value | padt.value)
+        if padbuttons == padt.value:
+            self.pb = PointerButton.TOUCH
+        elif padbuttons == padt.value + pad.value:
+            self.pb = PointerButton.PRESS
+        else:
+            self.pb = PointerButton.NONE
+
+
 class VirtualKeypad():
     def __init__(self):
-        # self.kp = kp_right if right else kp_left
-        # self.offset = wsx//2 if right else 0
-        self.lpx, self.lpy = 0x8000*wsx//0x1fffe, 0x8000*wsy//0xffff
-        self.rpx, self.rpy = 0x18000*wsx//0x1fffe, 0x8000*wsy//0xffff
-        self.lpb, self.rpb = PointerButton.NONE, PointerButton.NONE
-        self.lk, self.rk = '', ''
-        self.lpress, self.rpress = False, False
+        self.l = Pointer(False)
+        self.r = Pointer(True)
 
-    def updatePointers(self, sci):
-        self.lpx = (0x8000+sci.lpad_x*12//10)*wsx//(0x1fffe)
-        self.lpy = (0x8000-sci.lpad_y*12//10)*wsy//(0xffff)
-        self.rpx = (0x18000+sci.rpad_x*12//10)*wsx//(0x1fffe)
-        self.rpy = (0x8000-sci.rpad_y*12//10)*wsy//(0xffff)
+    def updateState(self, sci, sci_p):
+        self.l.px = (0x8000+sci.lpad_x*12//10)*wsx//(0x1fffe)
+        self.l.py = (0x8000-sci.lpad_y*12//10)*wsy//(0xffff)
+        self.r.px = (0x18000+sci.rpad_x*12//10)*wsx//(0x1fffe)
+        self.r.py = (0x8000-sci.rpad_y*12//10)*wsy//(0xffff)
+        self.l.updateState(sci, sci_p)
+        self.r.updateState(sci, sci_p)
+
 
     def renderKeyboards(self):
         ovr.canvas.fill((0x0f, 0x28, 0x3c))
-        self.lk = _keypad(self.lpx, self.lpy, self.lpress, False)
-        # if self.lpress and self.lk != '':
-        #     tapKey(whatKey[self.lk])
-        self.rk = _keypad(self.rpx, self.rpy, self.rpress, True)
-        # if self.rpress and self.rk != '':
-        #     tapKey(whatKey[self.rk])
-
-    def getButtonState(self, sci, sci_p):
-        lpadbuttons = sci.buttons & (SCButtons.LPAD.value + SCButtons.LPADTOUCH.value)
-        rpadbuttons = sci.buttons & (SCButtons.RPAD.value + SCButtons.RPADTOUCH.value)
-        self.rpress, self.lpress = False, False
-        if rpadbuttons == SCButtons.RPADTOUCH.value:
-            self.rpb, self.rpress = PointerButton.TOUCH, bool(sci_p.buttons & SCButtons.RPAD.value)
-        elif rpadbuttons == SCButtons.RPADTOUCH.value + SCButtons.RPAD.value:
-            self.rpb = PointerButton.PRESS
-        else:
-            self.rpb = PointerButton.NONE
-        if lpadbuttons == SCButtons.LPADTOUCH.value:
-            self.lpb, self.lpress = PointerButton.TOUCH, bool(sci_p.buttons & SCButtons.LPAD.value)
-        elif lpadbuttons == SCButtons.LPADTOUCH.value + SCButtons.LPAD.value:
-            self.lpb = PointerButton.PRESS
-        else:
-            self.lpb = PointerButton.NONE
+        self.l.k = _keypad(self.l.px, self.l.py, False)
+        self.r.k = _keypad(self.r.px, self.r.py, True)
 
 
 def tapKey(k):
@@ -160,28 +157,28 @@ def tapKey(k):
     kb.releaseEvent([k])
 
 
-def virtualKeycap(txt, x, y, w, h, px, py):
-    b = px > x and px < x + w and py > y and py < y+h
-    ovr.drawKeycap(b, txt, x, y, w, h)
-    return b
+def isInBox(x, y, w, h, px, py):
+    return px > x and px < x + w and py > y and py < y+h
 
 
-def _rowOfKeys(ls, x, y, w, h, px, py, press):
+def _rowOfKeys(ls, x, y, w, h, px, py):
     n = len(ls)
     k = ""
     for i, l in enumerate(ls):
-        if virtualKeycap(l, x+i*w//n, y, w//n, h, px, py):  # and press:
+        b = isInBox(x+i*w//n, y, w//n, h, px, py)
+        ovr.drawKeycap(b, l, x+i*w//n, y, w//n, h)
+        if b:
             k = l
     return k
 
 
-def _keypad(px, py, press, right):
+def _keypad(px, py, right):
     n = 5
     tr = ""
     offset = wsx//2 if right else 0
     kp = kp_right if right else kp_left
     for row, krow in enumerate(kp):
-        tr += _rowOfKeys(krow, offset, row*wsy//n, wsx//2, wsy//n, px, py, press)
+        tr += _rowOfKeys(krow, offset, row*wsy//n, wsx//2, wsy//n, px, py)
     return tr
 
 
@@ -196,8 +193,6 @@ class OSKEventMapper(EventMapper):
             ovr.canvas.fill((255, 0, 0))
             ovr.update()
             sys.exit()
-        else:
-            print("ABORT")
 
     def set_overlay_buttons(self):
         self.setButtonAction(SCButtons.LGRIP, sui.Keys.KEY_LEFTSHIFT)
@@ -211,14 +206,14 @@ class OSKEventMapper(EventMapper):
     @staticmethod
     def clickRightCallback(self, btn, pressed):
         if pressed:
-            if vkp.rk != '':
-                tapKey(whatKey[vkp.rk])
+            if vkp.r.k != '':
+                tapKey(whatKey[vkp.r.k])
 
     @staticmethod
     def clickLeftCallback(self, btn, pressed):
         if pressed:
-            if vkp.lk != '':
-                tapKey(whatKey[vkp.lk])
+            if vkp.l.k != '':
+                tapKey(whatKey[vkp.l.k])
 
 
 ovr = Overlay()
@@ -233,17 +228,16 @@ def update(sc, sci):
         return
     evm.process(sc, sci)
     global sci_p
-    vkp.updatePointers(sci)
-    vkp.getButtonState(sci, sci_p)
+    vkp.updateState(sci, sci_p)
     vkp.renderKeyboards()
 
-    ovr.drawPointer((255, 128, 128), vkp.lpx, vkp.lpy, vkp.lpb)
-    ovr.drawPointer((255, 128, 128), vkp.rpx, vkp.rpy, vkp.rpb)
+    ovr.drawPointer((255, 128, 128), vkp.l.px, vkp.l.py, vkp.l.pb)
+    ovr.drawPointer((255, 128, 128), vkp.r.px, vkp.r.py, vkp.r.pb)
     ovr.update()
     sci_p = sci
 
 if __name__ == '__main__':
-    virtualKeycap("PLEASE INSERT CONTROLLER", wsx//4, wsy//4, wsx//2, wsy//2, 0, 0)
+    ovr.drawKeycap(False, "PLEASE INSERT CONTROLLER", wsx//4, wsy//4, wsx//2, wsy//2)
     ovr.update()
     evm = OSKEventMapper()
     sc = SteamController(callback=update)
